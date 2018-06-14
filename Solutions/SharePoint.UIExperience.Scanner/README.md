@@ -1,7 +1,7 @@
 # SharePoint "Modern" user interface experience scanner #
 
 ### Summary ###
-Using this command line utility you can scan your tenant for compatibility with the SharePoint Online "modern" user interface experience. The scanner will give you a detailed view of sites that are not using "modern" pages, lists and libraries that are rendered in "classic" mode and finally it will also give you a report of customizations which are simply ignored in the "modern" user interface. 
+Using this command line utility you can scan your tenant for compatibility with the SharePoint Online "modern" user interface experience. The scanner will give you a detailed view of sites that are not using "modern" pages, lists and libraries that are rendered in "classic" mode and finally it will also give you a report of customizations which are simply ignored in the "modern" user interface. This scanner is a key piece if you want to modernize your classic sites. Checkout the [Modernize your classic sites](https://docs.microsoft.com/en-us/sharepoint/dev/transform/modernize-classic-sites) article on docs.microsoft.com to learn more.
 
 If you want to learn more about the "modern" experiences then please checkout our [MSDN guidance](https://msdn.microsoft.com/en-us/pnp_articles/modern-experience-customizations):
 - [Customizing "modern" lists and libraries](https://msdn.microsoft.com/en-us/pnp_articles/modern-experience-customizations-customize-lists-and-libraries)
@@ -20,6 +20,9 @@ SharePoint.UIExperience.Scanner | Bert Jansen (**Microsoft**)
 ### Version history ###
 Version  | Date | Comments
 ---------| -----| --------
+1.6 | June 4th 2018 | Added Excel based report generation to make it easier to consume the generated data
+1.5 | March 1st 2018 | Reliability improvements + fix to always fill the list basetemplate value
+1.4 | January 23rd 2018 | Additional lists are supported in modern UI (Asset libraries, Promoted links, Forms libraries and Wiki page libraries) + Authenticode signing of the scanner .exe
 1.3 | August 31st 2017 | Added support to use a CSV file as input for the list of sites to scan
 1.2 | August 14th 2017 | Support for Announcement and Links lists is available, so don't mark it as a blocker (see https://techcommunity.microsoft.com/t5/SharePoint-Blog/Improving-SharePoint-Links-and-Announcements-lists/ba-p/92379)
 1.1 | June 1st 2017 | Managed metadata navigation support will be available (see https://techcommunity.microsoft.com/t5/SharePoint-Blog/SharePoint-filters-pane-updates-filtering-and-metadata/ba-p/74162), so don't mark it as a blocker
@@ -37,12 +40,14 @@ The main purpose of this tool is to give you a report of sites, lists, libraries
 - Which lists are not presenting themselves using the "modern" user interface and what's causing that: there are many reasons why a list is falling back to showing the "classic" user interface, all of which will be listed in the report.
 - Get a better understanding of which customizations in your tenant are not compatible with the "modern" experiences
 
+![List and Library modern UI readiness report](modernuicompatibilityreport.png)
+
 Using the reports you can streamline the "modern" experience in your tenant: you can increase the amount of sites, libraries and lists that work fine using "modern", but the reports also give you the data that allows you to disable "modern" for a subset of sites which are not yet ready for it.
 
 # Quick start guide #
 ## Download the tool ##
 You can download the tool from here:
- - [UIExperience scanner for SharePoint Online](https://github.com/SharePoint/PnP-Tools/blob/master/Solutions/SharePoint.UIExperience.Scanner/Releases/UI%20Experience%20scanner%20for%20SharePoint%20Online%20v1.3.zip?raw=true)
+ - [UIExperience scanner for SharePoint Online](https://github.com/SharePoint/PnP-Tools/blob/master/Solutions/SharePoint.UIExperience.Scanner/Releases/UI%20Experience%20scanner%20for%20SharePoint%20Online%20v1.6.zip?raw=true)
 
 Once you've downloaded the tool (or alternatively you can also compile it yourself using Visual Studio) you have a folder containing the tool **UIExperienceScanner.exe**. Start a (PowerShell) command prompt and navigate to that folder so that you can use the tool.
 
@@ -148,6 +153,7 @@ After the run you'll find a new sub folder (e.g. 636072073126632445) which conta
 
 Report | Content
 ---------|----------
+**Modern UI List Readiness.xlsx** | An Excel report using PowerQuery and PowerPivot to make it easier for to analyze the data delivered via the below CSV files
 **ModernPagesBlocked.csv** | Lists all sites which are not able to use "modern" pages. "Modern" pages can be blocked by disabling the "modern" page feature as explained in [MSDN](https://msdn.microsoft.com/en-us/pnp_articles/modern-experience-customizations-customize-pages#site-level-configuration).
 **ModernListBlocked.csv** | Contains all lists which are not using the "modern" experience. There are many reasons why a list is not using the "modern" experience as explained in this [MSDN article](https://msdn.microsoft.com/en-us/pnp_articles/modern-experience-customizations-customize-lists-and-libraries#when-does-the-built-in-auto-detect-automatically-switch-rendering-back-to-classic).
 **IgnoredCustomizations.csv** | Provides an overview of all sites that have customizations which are ignored on "modern" experiences. This report summarizes the details found in the next set of reports. Typically all customizations that affect the page like custom CSS, custom master pages and embedded JavaScript are simply ignored on "modern" pages. Use this report to get a better understanding of which of your customizations require review work in order to be compatible with the "modern" experience. Please consult [our MSDN articles](https://msdn.microsoft.com/en-us/pnp_articles/modern-experience-customizations) to better understand what customization options are possible when using "modern" user interfaces.
@@ -296,7 +302,7 @@ Load the IgnoredCustomizations_CustomAction.csv into Microsoft Excel and use bel
 
 Filter | Takeaway
 ---------|----------
-**No filter** | Lists all the sites having a user custom action which is not going to work on "modern" pages. You need to assess how important these user custom actions are: if they are business critical it's better to either move the site back to "classic" or alternatively fix this [if Microsoft would offer the capabilities ](http://aka.ms/spfx-roadmap)for doing so in the future.
+**No filter** | Lists all the sites having a user custom action which is not going to work on "modern" pages. You need to assess how important these user custom actions are: if they are business critical it's better to either build an alternative [SharePoint Framework extension](https://docs.microsoft.com/en-us/sharepoint/dev/spfx/extensions/overview-extensions) or move the site back to "classic".
 **Location = ScriptLink** | We often see customers using user custom actions to embed a JavaScript file on all their sites. Depending on what this JavaScript file is doing there might not be an impact for the "modern" experience. It's recommended to review what the embedded JavaScript is doing and if needed update the JavaScript.
 
 ## Understanding the IgnoredCustomizations_AlternateCSS.csv file
@@ -319,6 +325,16 @@ Filter | Takeaway
 **Web Template = STS#0** | This lists all team sites having a custom CSS file...while there's typically no need for doing this. Verify if using the out of the box branding options is not sufficient for your teams sites and then drop this custom CSS reference.
 
 # Advanced topics #
+
+## Can I generate the Excel reports for existing scan data? ##
+
+You can do this by specifying the folder(s) with already existing scan data using the -g parameter. The scanner will concatenate the data from all passed folders and will generate the needed reports.
+
+```console
+uiexperiencescanner -g <paths>
+
+uiexperiencescanner -g "c:\temp\636529695601669598,c:\temp\636529695601698765"
+```
 
 ## I want to do a partial scan...can I?
 Using the -m command line parameter you can specify the scan mode. The tool supports three scans as listed below. If the -m command line parameter is omitted all three scans will be executed.
@@ -411,8 +427,8 @@ https://contoso.sharepoint.com/sites/test2
 # Complete list of command line switches for the SharePoint Online version #
 
 ```Console
-SharePoint UI Experience Scanner tool 1.3.0.0
-Copyright (C) 2017 SharePoint PnP
+SharePoint UI Experience Scanner tool 1.6.0.0
+Copyright (C) 2018 SharePoint PnP
 ==========================================================
 
 See the PnP-Tools repo for more information at:
@@ -452,6 +468,11 @@ https://contoso-admin.contoso.com -u spadmin@contoso.com -p pwd
                                               following UIExperience options blockedlists, blockedpages or
                                               ignoredcustomizations for individual scanning. Omit or use scan for a
                                               full scan
+
+  -b, --exportwebpartproperties               (Default: False) Export the web part property data
+
+  -c, --skipusageinformation                  (Default: False) Don't use search to get the site/page usage information and don't
+                                              export that data
 
   -t, --tenant                                Tenant name, e.g. contoso when your sites are under
                                               https://contoso.sharepoint.com/sites. This is the recommended model for
